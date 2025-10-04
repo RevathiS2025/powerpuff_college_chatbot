@@ -7,14 +7,14 @@ import chromadb
 
 # -- ROLE MAP --
 DOCX_ROLE_MAP = {
-    "About_College.docx": ["parent", "dean"],
-    "Courses_Offered.docx": ["parent", "dean"],
-    "Fees_Structure.docx": ["parent", "dean"],
+    "About_College.docx": ["parent", "dean","student"],
+    "Courses_Offered.docx": ["parent", "dean","professor","student"],
+    "Fees_Structure.docx": ["parent", "dean","student"],
     "course_syllabus.docx": ["student", "professor", "dean"],
-    "Placement_Highlights.docx": ["student", "professor", "dean"],
+    "Placement_Highlights.docx": ["student", "professor", "dean","parent"],
     "exam_schedule.docx": ["student", "professor", "dean"],
-    "Placement_oppurtunities.docx": ["student", "dean"],
-    "student_events.docx": ["student", "dean"],
+    "Placement_oppurtunities.docx": ["student", "dean","professor","parent"],
+    "student_events.docx": ["student", "dean","professor"],
     "Academic_Policies.docx": ["professor", "dean"],
     "Event_coordination.docx": ["professor", "dean"],
     "Exam_evaluation.docx": ["professor", "dean"],

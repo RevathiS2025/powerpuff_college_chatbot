@@ -94,7 +94,7 @@ def show_chat_interface():
         "dean": "🏛️ Welcome! I have access to all college information including analytics and strategic planning."
     }
     
-    st.info(role_messages.get(user_info['role'], "Welcome to the college information system!"))
+    st.info(role_messages.get(user_info['role'], "Welcome to the college chatbot!"))
     
     # Chat interface
     display_chat_history()

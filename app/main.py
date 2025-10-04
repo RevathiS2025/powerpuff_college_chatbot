@@ -56,7 +56,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Main header
-    st.markdown('<h1 class="main-header">🎓 College Information Chatbot</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">Powerpuff College Chatbot Welcomes you!</h1>', unsafe_allow_html=True)
     
     # Check if user is authenticated
     if check_authentication():

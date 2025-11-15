@@ -1,9 +1,9 @@
-
 import os
 import json
 from docx import Document
 from sentence_transformers import SentenceTransformer
 import chromadb
+
 
 # -- ROLE MAP --
 DOCX_ROLE_MAP = {
@@ -24,16 +24,19 @@ DOCX_ROLE_MAP = {
     "Strategic_Planning.docx": ["dean"]
 }
 
+
 # -- PARAMETERS --
 DOCX_FOLDER = r"D:/Powerpuff/college_genai/data/raw"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
 PERSIST_DIR = "chromadb_data"
 
+
 def extract_text_from_docx(docx_path):
     """Extract text from a .docx file."""
     doc = Document(docx_path)
     return "\n".join([para.text.strip() for para in doc.paragraphs if para.text.strip()])
+
 
 def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     """Split text into overlapping chunks."""
@@ -45,13 +48,16 @@ def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
         start += chunk_size - overlap
     return chunks
 
+
 def main():
     # Persistent ChromaDB client
     client = chromadb.PersistentClient(path=PERSIST_DIR)
     collection = client.get_or_create_collection(name="docs")
 
+
     # Embedding model
     model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
     # Process each .docx
     for fname in os.listdir(DOCX_FOLDER):
@@ -61,9 +67,11 @@ def main():
                 print(f"Skipping {fname}: No roles specified in DOCX_ROLE_MAP.")
                 continue
 
+
             print(f"Processing: {fname} | Roles: {roles}")
             text = extract_text_from_docx(os.path.join(DOCX_FOLDER, fname))
             chunks = chunk_text(text)
+
 
             for idx, chunk in enumerate(chunks):
                 embedding = model.encode(chunk).tolist()
@@ -71,7 +79,7 @@ def main():
                 metadata = {
                  "source_file": fname,
                  "chunk_id": idx,
-                 "roles": json.dumps(roles)  # store as a Python list
+                 "roles": roles  # store directly as list for Chroma filters
                 }
                 collection.add(
                     ids=[doc_id],
@@ -80,7 +88,15 @@ def main():
                     metadatas=[metadata]
                 )
 
+
     print(f"✅ Ingest complete. Total vectors in DB: {collection.count()}")
+
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+

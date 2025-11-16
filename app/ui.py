@@ -115,6 +115,13 @@ def show_signup_form():
     }
     st.info(f"**{selected_role.title()}:** {role_descriptions.get(selected_role, '')}")
 
+    if st.session_state.get("signup_reset"):
+        st.session_state["signup_username"] = ""
+        st.session_state["signup_email"] = ""
+        st.session_state["signup_password"] = ""
+        st.session_state["signup_confirm"] = ""
+        st.session_state["signup_role"] = UserRole.get_all_roles()[0]
+        st.session_state["signup_reset"] = False
 
     with st.form("signup_form"):
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -134,12 +141,7 @@ def show_signup_form():
             if signup_button:
                 role_to_register = st.session_state.get("signup_role", UserRole.get_all_roles()[0])
                 if register_user(username, email, password, confirm_password, role_to_register):
-                    # Clear fields after successful registration
-                    st.session_state["signup_username"] = ""
-                    st.session_state["signup_email"] = ""
-                    st.session_state["signup_password"] = ""
-                    st.session_state["signup_confirm"] = ""
-                    st.session_state["signup_role"] = UserRole.get_all_roles()[0]
+                    st.session_state["signup_reset"] = True
                     st.balloons()
                     st.rerun()
 

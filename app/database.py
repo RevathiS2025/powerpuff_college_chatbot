@@ -110,7 +110,6 @@ class DatabaseManager:
     def register_user(self, username: str, email: str, password: str, role: str) -> bool:
         """Register a new user."""
         self.ensure_connection()
-        self.ensure_connection()
         if not self.connection:
             st.error("Database connection is not available.")
             return False
@@ -158,6 +157,7 @@ class DatabaseManager:
    
     def save_chat_message(self, user_id: int, message: str, response: str):
         """Save chat message and response to database."""
+        self.ensure_connection()
         if not self.connection:
             st.error("Database connection is not available.")
             return
@@ -226,4 +226,6 @@ class DatabaseManager:
 @st.cache_resource
 def get_database():
     """Get database instance (cached)."""
-    return DatabaseManager()
+    db = DatabaseManager()
+    db.ensure_connection()
+    return db

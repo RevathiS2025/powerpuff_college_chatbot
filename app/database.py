@@ -31,7 +31,7 @@ class DatabaseManager:
                 self.create_tables()
                 return
         except Error as e:
-            st.error(f"Error connecting to MySQL: {e}")
+            st.warning(f"Error connecting to MySQL: {e}")
             self.connection = None
         try:
             db_path = os.getenv('SQLITE_PATH', os.path.join(os.getcwd(), 'powerpuff_college.db'))
@@ -191,6 +191,19 @@ class DatabaseManager:
             st.error(f"Error getting chat history: {e}")
             return []
 
+
+    def has_users(self) -> bool:
+        self.ensure_connection()
+        if not self.connection:
+            return False
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT 1 FROM users LIMIT 1")
+            exists = cursor.fetchone() is not None
+            cursor.close()
+            return exists
+        except Exception:
+            return False
 
     def clear_chat_history(self, user_id: int) -> bool:
         """Delete all chat history for a user."""

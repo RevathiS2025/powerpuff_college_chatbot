@@ -56,26 +56,21 @@ def login_user(username: str, password: str) -> bool:
         st.session_state.authenticated = True
         st.session_state.user_info = user_info
 
-        # Load chat history
         chat_history = db.get_chat_history(user_info['id'])
         st.session_state.chat_history = []
 
-        # Convert to chat format
         for chat in chat_history:
-            st.session_state.chat_history.append({
-                "role": "user",
-                "content": chat['message']
-            })
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": chat['response']
-            })
+            st.session_state.chat_history.append({"role": "user", "content": chat['message']})
+            st.session_state.chat_history.append({"role": "assistant", "content": chat['response']})
 
         st.success(f"Welcome back, {user_info['username']}!")
         st.rerun()
         return True
     else:
-        st.error("Invalid username or password.")
+        if hasattr(db, "has_users") and not db.has_users():
+            st.warning("No accounts found. Please sign up to create your account.")
+        else:
+            st.error("Invalid username or password.")
         return False
 
 def register_user(username: str, email: str, password: str, confirm_password: str, role: str) -> bool:

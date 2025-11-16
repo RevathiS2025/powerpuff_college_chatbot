@@ -119,7 +119,7 @@ def register_user(username: str, email: str, password: str, confirm_password: st
     db = get_database()
 
     if db.register_user(username, email, password, role):
-        st.success("Registration successful! Please login with your credentials.")
+        st.session_state["signup_success"] = True
         return True
     else:
         st.error("Username or email already exists. Please choose different ones.")

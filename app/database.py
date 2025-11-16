@@ -15,10 +15,22 @@ class DatabaseManager:
     def __init__(self):
         self.connection = None
         self.is_sqlite = False
+        self.force_sqlite = (os.getenv('DB_BACKEND','').lower() == 'sqlite') or (os.getenv('USE_SQLITE','').lower() in ('1','true','yes'))
         self.connect()
    
     def connect(self):
         """Establish connection to database with SQLite fallback."""
+        if self.force_sqlite:
+            try:
+                db_path = os.getenv('SQLITE_PATH', os.path.join(os.getcwd(), 'powerpuff_college.db'))
+                self.connection = sqlite3.connect(db_path, check_same_thread=False)
+                self.connection.row_factory = sqlite3.Row
+                self.is_sqlite = True
+                self.create_tables()
+            except Exception as e2:
+                st.error(f"Error connecting to SQLite: {e2}")
+                self.connection = None
+            return
         try:
             self.connection = mysql.connector.connect(
                 host=os.getenv('MYSQL_HOST', 'localhost'),

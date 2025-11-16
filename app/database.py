@@ -1,5 +1,6 @@
 import mysql.connector
 from mysql.connector import Error
+import sqlite3
 import hashlib
 import os
 from typing import Optional, Dict, Any
@@ -13,10 +14,11 @@ class DatabaseManager:
    
     def __init__(self):
         self.connection = None
+        self.is_sqlite = False
         self.connect()
    
     def connect(self):
-        """Establish connection to MySQL database."""
+        """Establish connection to database with SQLite fallback."""
         try:
             self.connection = mysql.connector.connect(
                 host=os.getenv('MYSQL_HOST', 'localhost'),
@@ -24,50 +26,77 @@ class DatabaseManager:
                 user=os.getenv('MYSQL_USER', 'root'),
                 password=os.getenv('MYSQL_PASSWORD')
             )
-           
             if self.connection.is_connected():
+                self.is_sqlite = False
                 self.create_tables()
-               
+                return
         except Error as e:
             st.error(f"Error connecting to MySQL: {e}")
+            self.connection = None
+        try:
+            db_path = os.getenv('SQLITE_PATH', os.path.join(os.getcwd(), 'powerpuff_college.db'))
+            self.connection = sqlite3.connect(db_path, check_same_thread=False)
+            self.connection.row_factory = sqlite3.Row
+            self.is_sqlite = True
+            st.info(f"Using SQLite database at {db_path}")
+            self.create_tables()
+        except Exception as e2:
+            st.error(f"Error connecting to SQLite: {e2}")
             self.connection = None
    
     def create_tables(self):
         """Create necessary tables if they don't exist."""
         try:
             cursor = self.connection.cursor()
-           
-            # Users table
-            create_users_table = """
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                role ENUM('parent', 'student', 'professor', 'dean') NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_login TIMESTAMP NULL
-            )
-            """
-           
-            # Chat history table
-            create_chat_table = """
-            CREATE TABLE IF NOT EXISTS chat_history (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT,
-                message TEXT NOT NULL,
-                response TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-           
+            if self.is_sqlite:
+                create_users_table = """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP NULL
+                )
+                """
+                create_chat_table = """
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    message TEXT NOT NULL,
+                    response TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            else:
+                create_users_table = """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(50) UNIQUE NOT NULL,
+                    email VARCHAR(100) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    role ENUM('parent', 'student', 'professor', 'dean') NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP NULL
+                )
+                """
+                create_chat_table = """
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT,
+                    message TEXT NOT NULL,
+                    response TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
             cursor.execute(create_users_table)
             cursor.execute(create_chat_table)
             self.connection.commit()
             cursor.close()
-           
-        except Error as e:
+        except Exception as e:
             st.error(f"Error creating tables: {e}")
    
     def hash_password(self, password: str) -> str:
@@ -76,94 +105,81 @@ class DatabaseManager:
    
     def register_user(self, username: str, email: str, password: str, role: str) -> bool:
         """Register a new user."""
+        if not self.connection:
+            st.error("Database connection is not available.")
+            return False
         try:
             cursor = self.connection.cursor()
-           
-            # Check if username or email already exists
-            check_query = "SELECT id FROM users WHERE username = %s OR email = %s"
+            ph = "?" if self.is_sqlite else "%s"
+            check_query = f"SELECT id FROM users WHERE username = {ph} OR email = {ph}"
             cursor.execute(check_query, (username, email))
-           
             if cursor.fetchone():
                 cursor.close()
-                return False  # User already exists
-           
-            # Insert new user
+                return False
             hashed_password = self.hash_password(password)
-            insert_query = """
-            INSERT INTO users (username, email, password_hash, role)
-            VALUES (%s, %s, %s, %s)
-            """
+            insert_query = f"INSERT INTO users (username, email, password_hash, role) VALUES ({ph}, {ph}, {ph}, {ph})"
             cursor.execute(insert_query, (username, email, hashed_password, role))
             self.connection.commit()
             cursor.close()
             return True
-           
-        except Error as e:
+        except Exception as e:
             st.error(f"Error registering user: {e}")
             return False
    
     def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate user and return user info."""
+        if not self.connection:
+            st.error("Database connection is not available.")
+            return None
         try:
-            cursor = self.connection.cursor(dictionary=True)
+            cursor = self.connection.cursor(dictionary=True) if not self.is_sqlite else self.connection.cursor()
             hashed_password = self.hash_password(password)
-           
-            query = """
-            SELECT id, username, email, role
-            FROM users
-            WHERE username = %s AND password_hash = %s
-            """
+            ph = "?" if self.is_sqlite else "%s"
+            query = f"SELECT id, username, email, role FROM users WHERE username = {ph} AND password_hash = {ph}"
             cursor.execute(query, (username, hashed_password))
-            user = cursor.fetchone()
-           
+            row = cursor.fetchone()
+            user = dict(row) if (row and self.is_sqlite) else row
             if user:
-                # Update last login
-                update_query = "UPDATE users SET last_login = NOW() WHERE id = %s"
+                update_query = (f"UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = {ph}" if self.is_sqlite else "UPDATE users SET last_login = NOW() WHERE id = %s")
                 cursor.execute(update_query, (user['id'],))
                 self.connection.commit()
-           
             cursor.close()
             return user
-           
-        except Error as e:
+        except Exception as e:
             st.error(f"Error authenticating user: {e}")
             return None
    
     def save_chat_message(self, user_id: int, message: str, response: str):
         """Save chat message and response to database."""
+        if not self.connection:
+            st.error("Database connection is not available.")
+            return
         try:
             cursor = self.connection.cursor()
-           
-            insert_query = """
-            INSERT INTO chat_history (user_id, message, response)
-            VALUES (%s, %s, %s)
-            """
+            ph = "?" if self.is_sqlite else "%s"
+            insert_query = f"INSERT INTO chat_history (user_id, message, response) VALUES ({ph}, {ph}, {ph})"
             cursor.execute(insert_query, (user_id, message, response))
             self.connection.commit()
             cursor.close()
-           
-        except Error as e:
+        except Exception as e:
             st.error(f"Error saving chat message: {e}")
    
     def get_chat_history(self, user_id: int, limit: int = 50) -> list:
         """Get chat history for a user."""
+        if not self.connection:
+            st.error("Database connection is not available.")
+            return []
         try:
-            cursor = self.connection.cursor(dictionary=True)
-           
-            query = """
-            SELECT message, response, timestamp
-            FROM chat_history
-            WHERE user_id = %s
-            ORDER BY timestamp DESC
-            LIMIT %s
-            """
+            cursor = self.connection.cursor(dictionary=True) if not self.is_sqlite else self.connection.cursor()
+            ph = "?" if self.is_sqlite else "%s"
+            query = f"SELECT message, response, timestamp FROM chat_history WHERE user_id = {ph} ORDER BY timestamp DESC LIMIT {ph}"
             cursor.execute(query, (user_id, limit))
-            history = cursor.fetchall()
+            rows = cursor.fetchall()
             cursor.close()
-           
-            return list(reversed(history))  # Return in chronological order
-           
-        except Error as e:
+            if self.is_sqlite:
+                return list(reversed([dict(r) for r in rows]))
+            return list(reversed(rows))
+        except Exception as e:
             st.error(f"Error getting chat history: {e}")
             return []
 
@@ -174,22 +190,27 @@ class DatabaseManager:
             if not self.connection:
                 st.error("Database connection is not available.")
                 return False
-
-
             cursor = self.connection.cursor()
-            delete_query = "DELETE FROM chat_history WHERE user_id = %s"
+            ph = "?" if self.is_sqlite else "%s"
+            delete_query = f"DELETE FROM chat_history WHERE user_id = {ph}"
             cursor.execute(delete_query, (user_id,))
             self.connection.commit()
             cursor.close()
             return True
-        except Error as e:
+        except Exception as e:
             st.error(f"Error clearing chat history: {e}")
             return False
    
     def close_connection(self):
         """Close database connection."""
-        if self.connection and self.connection.is_connected():
-            self.connection.close()
+        if self.connection:
+            try:
+                if hasattr(self.connection, 'is_connected') and self.connection.is_connected():
+                    self.connection.close()
+                else:
+                    self.connection.close()
+            except Exception:
+                pass
 
 
 # Global database instance

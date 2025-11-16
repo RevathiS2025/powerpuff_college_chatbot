@@ -3,8 +3,6 @@ from app.auth import login_user, register_user, logout_user, get_current_user
 from backend.rbac import UserRole
 
 
-
-
 def show_login_signup_tabs():
     """Display login and signup tabs with a welcoming hero banner."""
     st.markdown(
@@ -12,7 +10,7 @@ def show_login_signup_tabs():
         <div class="auth-hero">
           <div class="auth-hero-icon">🎓</div>
           <div class="auth-hero-text">
-            <h2>Welcome to Powerpuff College</h2>
+            <h1>Welcome to Powerpuff College chat bot!</h1>
             <p>Your personalized access to campus information and services.</p>
           </div>
         </div>

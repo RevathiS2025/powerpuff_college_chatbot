@@ -44,6 +44,10 @@ class DatabaseManager:
             st.error(f"Error connecting to SQLite: {e2}")
             self.connection = None
    
+    def ensure_connection(self):
+        if not self.connection or (hasattr(self.connection, 'is_connected') and not self.connection.is_connected()):
+            self.connect()
+
     def create_tables(self):
         """Create necessary tables if they don't exist."""
         try:
@@ -105,6 +109,8 @@ class DatabaseManager:
    
     def register_user(self, username: str, email: str, password: str, role: str) -> bool:
         """Register a new user."""
+        self.ensure_connection()
+        self.ensure_connection()
         if not self.connection:
             st.error("Database connection is not available.")
             return False
@@ -128,6 +134,7 @@ class DatabaseManager:
    
     def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate user and return user info."""
+        self.ensure_connection()
         if not self.connection:
             st.error("Database connection is not available.")
             return None
@@ -166,6 +173,7 @@ class DatabaseManager:
    
     def get_chat_history(self, user_id: int, limit: int = 50) -> list:
         """Get chat history for a user."""
+        self.ensure_connection()
         if not self.connection:
             st.error("Database connection is not available.")
             return []
@@ -187,6 +195,7 @@ class DatabaseManager:
     def clear_chat_history(self, user_id: int) -> bool:
         """Delete all chat history for a user."""
         try:
+            self.ensure_connection()
             if not self.connection:
                 st.error("Database connection is not available.")
                 return False

@@ -96,7 +96,14 @@ def show_signup_form():
 
 
    
-    # Role selector placed OUTSIDE the form to enable live updates
+    if st.session_state.get("signup_reset"):
+        st.session_state["signup_username"] = ""
+        st.session_state["signup_email"] = ""
+        st.session_state["signup_password"] = ""
+        st.session_state["signup_confirm"] = ""
+        st.session_state["signup_role"] = UserRole.get_all_roles()[0]
+        st.session_state["signup_reset"] = False
+
     selected_role = st.selectbox(
         "🎭 Select Your Role",
         options=UserRole.get_all_roles(),
@@ -105,8 +112,6 @@ def show_signup_form():
         help="Select your role to get personalized information access"
     )
 
-
-    # Role descriptions
     role_descriptions = {
         "parent": "Access college overview, placement records, courses, and fee structure",
         "student": "Access course syllabus, placement opportunities, events, and exam schedules",
@@ -114,14 +119,6 @@ def show_signup_form():
         "dean": "Full access to all information including analytics and strategic planning"
     }
     st.info(f"**{selected_role.title()}:** {role_descriptions.get(selected_role, '')}")
-
-    if st.session_state.get("signup_reset"):
-        st.session_state["signup_username"] = ""
-        st.session_state["signup_email"] = ""
-        st.session_state["signup_password"] = ""
-        st.session_state["signup_confirm"] = ""
-        st.session_state["signup_role"] = UserRole.get_all_roles()[0]
-        st.session_state["signup_reset"] = False
 
     with st.form("signup_form"):
         col1, col2, col3 = st.columns([1, 2, 1])

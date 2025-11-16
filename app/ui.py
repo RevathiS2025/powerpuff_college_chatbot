@@ -96,6 +96,10 @@ def show_signup_form():
 
 
    
+    if st.session_state.get("signup_success"):
+        st.success("Registration successful! Please login with your credentials.")
+        st.session_state["signup_success"] = False
+
     if st.session_state.get("signup_reset"):
         st.session_state["signup_username"] = ""
         st.session_state["signup_email"] = ""

@@ -46,7 +46,7 @@ Each user — whether **Student, Parent, Professor, or Dean** — gets personali
 | 🧠 LLM | Kimi K2 via Groq |
 | 🗃️ Vector Store | ChromaDB |
 | 🧩 Embedding Model | Sentence Transformers (`all-MiniLM-L6-v2`) |
-| 🧾 Relational Database | MySQL |
+| 🧾 Relational Database | SQLite |
 | 🔒 Authentication | Role-Based Access Control (RBAC) |
 
 ---

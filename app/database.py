@@ -31,6 +31,7 @@ class DatabaseManager:
                 st.error(f"Error connecting to SQLite: {e2}")
                 self.connection = None
             return
+        mysql_err = None
         try:
             self.connection = mysql.connector.connect(
                 host=os.getenv('MYSQL_HOST', 'localhost'),
@@ -43,7 +44,7 @@ class DatabaseManager:
                 self.create_tables()
                 return
         except Error as e:
-            st.warning(f"Error connecting to MySQL: {e}")
+            mysql_err = e
             self.connection = None
         try:
             db_path = os.getenv('SQLITE_PATH', os.path.join(os.getcwd(), 'powerpuff_college.db'))
@@ -52,7 +53,10 @@ class DatabaseManager:
             self.is_sqlite = True
             st.info(f"Using SQLite database at {db_path}")
             self.create_tables()
+            return
         except Exception as e2:
+            if mysql_err:
+                st.error(f"Error connecting to MySQL: {mysql_err}")
             st.error(f"Error connecting to SQLite: {e2}")
             self.connection = None
    
